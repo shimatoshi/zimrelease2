@@ -1,1 +1,1 @@
-{"cleanUrls":true,"headers":[{"source":"/(.*)","headers":[{"key":"Cache-Control","value":"public, max-age=0, s-maxage=300"}]}]}
+{"cleanUrls":true,"rewrites":[{"source":"/api/releases","destination":"https://api.github.com/repos/shimatoshi/zim-releases/releases?per_page=100"}],"headers":[{"source":"/(.*)","headers":[{"key":"Cache-Control","value":"public, max-age=0, s-maxage=300"}]}]}
