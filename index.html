@@ -1,68 +1,73 @@
 <!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ZIM Library</title>
 <style>
-:root{color-scheme:dark;--bg:#0d0f12;--panel:#15181d;--line:#292e36;--text:#f3f5f7;--muted:#9ba3ad;--accent:#8cc8ff}
-*{box-sizing:border-box}
-body{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;max-width:920px;margin:0 auto;padding:40px 18px 72px;background:var(--bg);color:var(--text)}
-header{margin-bottom:36px}h1{font-size:1.75rem;margin:0 0 8px}.lead{color:var(--muted);margin:0}
-.category{margin-top:36px}.category-head{display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}
-.category h2{font-size:1.15rem;margin:0}.count{font-size:.8rem;color:var(--muted)}
-.grid{display:grid;gap:12px}
-.item{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:18px}
-.info{min-width:0}.title{font-weight:700;font-size:1rem;overflow-wrap:anywhere}.tag{color:var(--muted);font-size:.84rem;margin-top:5px}
-a.download{flex:none;background:#eee;color:#111;text-decoration:none;border-radius:8px;padding:9px 13px;font-weight:700;font-size:.9rem}
-.err{color:#ffb4b4}.empty{color:var(--muted)}
-@media(max-width:560px){body{padding-top:28px}.item{align-items:flex-start;flex-direction:column}.download{width:100%;text-align:center}}
-</style>
-</head>
-<body>
+:root{color-scheme:dark;--bg:#0d0f12;--panel:#15181d;--line:#292e36;--text:#f3f5f7;--muted:#9ba3ad;--accent:#8cc8ff}*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;max-width:980px;margin:auto;padding:36px 18px 72px;background:var(--bg);color:var(--text)}
+h1{font-size:1.75rem;margin:0 0 6px}.lead,.meta{color:var(--muted)}header{margin-bottom:24px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+button,select,input{font:inherit}.tab,.bulk{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:999px;padding:9px 14px;white-space:nowrap;cursor:pointer}
+.tab.active{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:700}
+.toolbar{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;gap:10px;margin:8px 0 24px}
+.search,select{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;padding:11px 12px;min-width:0}.bulk{border-radius:10px;font-weight:700}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}
+.section-head h2{font-size:1.15rem;margin:0}.count{font-size:.82rem;color:var(--muted)}
+.grid{display:grid;gap:12px}.item{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.info{min-width:0}.title{font-weight:700;overflow-wrap:anywhere}.meta{font-size:.84rem;margin-top:6px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.version{font-size:.72rem;font-weight:800;border:1px solid #4b5563;border-radius:5px;padding:2px 6px;color:#d5d9df}.version.v2{border-color:#7ab7e8;color:#9fd2ff}
+.download{flex:none;background:#eee;color:#111;text-decoration:none;border-radius:8px;padding:9px 13px;font-weight:700;font-size:.9rem}.empty,.err{color:var(--muted)}.err{color:#ffb4b4}
+@media(max-width:650px){body{padding-top:26px}.toolbar{grid-template-columns:1fr 1fr}.search{grid-column:1/-1}.item{align-items:flex-start;flex-direction:column}.download{width:100%;text-align:center}}
+</style></head><body>
 <header><h1>ZIM Library</h1><p class="lead">オフラインで閲覧できるZIMアーカイブ</p></header>
+<nav id="tabs" class="tabs"></nav>
+<div class="toolbar"><input id="search" class="search" type="search" placeholder="ZIMを検索…" autocomplete="off">
+<select id="sort"><option value="date-desc">日付：新しい順</option><option value="date-asc">日付：古い順</option><option value="title-asc">タイトル：あいうえお順</option><option value="title-desc">タイトル：逆順</option></select>
+<button id="bulk" class="bulk">カテゴリを一括DL</button></div>
 <main id="list">読み込み中…</main>
 <script>
 const CATEGORY_RULES=[
-  ['生物・自然科学',/(biology|bio|fish|goby|rhinogobius|yoshinobori|kurodai|nature|ecology|science|ヨシノボリ|クロダハゼ|生物|自然|魚)/i],
-  ['技術・IT',/(tech|software|program|code|computer|android|linux|ai|llm|web|技術|it)/i],
-  ['歴史・社会',/(history|society|politic|econom|culture|歴史|社会|政治|経済|文化)/i]
+ ['生物・自然科学',/(biology|bio|fish|goby|rhinogobius|yoshinobori|kurodai|nature|ecology|science|ヨシノボリ|クロダハゼ|生物|自然|魚|微生物|深海|南極)/i],
+ ['技術・IT',/(tech|software|program|code|computer|android|linux|\bai\b|llm|web|技術|it)/i],
+ ['歴史・社会',/(history|society|politic|econom|culture|歴史|社会|政治|経済|文化|江戸|飛脚)/i]
 ];
+const V2_SINCE=Date.parse('2026-09-29T00:00:00+09:00');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function titleFromName(name){
-  return name.replace(/\.zim$/i,'').replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+const titleFromName=n=>n.replace(/\.zim$/i,'').replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+function categoryFor(x){const t=[x.title,x.a.name,x.r.name,x.r.tag_name].filter(Boolean).join(' ');return (CATEGORY_RULES.find(([,re])=>re.test(t))||['その他'])[0]}
+function dateOf(x){return Date.parse(x.r.published_at||x.r.created_at||x.a.created_at||0)||0}
+function jpDate(ms){return ms?new Intl.DateTimeFormat('ja-JP',{year:'numeric',month:'numeric',day:'numeric'}).format(ms):'日付不明'}
+let all=[],active='すべて';
+function visible(){
+ const q=document.querySelector('#search').value.trim().toLocaleLowerCase('ja');
+ let xs=all.filter(x=>(active==='すべて'||x.category===active)&&(!q||[x.title,x.a.name,x.r.name,x.r.tag_name].filter(Boolean).join(' ').toLocaleLowerCase('ja').includes(q)));
+ const mode=document.querySelector('#sort').value;
+ xs.sort((a,b)=>mode==='date-asc'?dateOf(a)-dateOf(b):mode==='date-desc'?dateOf(b)-dateOf(a):mode==='title-desc'?b.title.localeCompare(a.title,'ja',{numeric:true}):a.title.localeCompare(b.title,'ja',{numeric:true}));
+ return xs;
 }
-function categoryFor(item){
-  if(item.category)return item.category;
-  const text=[item.title,item.a.name,item.r.name,item.r.tag_name].filter(Boolean).join(' ');
-  return (CATEGORY_RULES.find(([,re])=>re.test(text))||['その他'])[0];
+function render(){
+ const xs=visible(),el=document.querySelector('#list');
+ document.querySelector('#bulk').textContent=(active==='すべて'?'表示中':'「'+active+'」')+'を一括DL';
+ if(!xs.length){el.innerHTML='<p class="empty">該当するZIMはありません。</p>';return}
+ el.innerHTML='<div class="section-head"><h2>'+esc(active)+'</h2><span class="count">'+xs.length+'件</span></div><div class="grid">'+xs.map(x=>{
+  const d=dateOf(x),v=d>=V2_SINCE?'v2':'v1';
+  return '<article class="item"><div class="info"><div class="title">'+esc(x.title)+'</div><div class="meta"><span class="version '+v+'">'+v+'</span><span>'+esc(jpDate(d))+'</span><span>·</span><span>'+(x.a.size/1048576).toFixed(1)+' MB</span></div></div><a class="download" href="'+esc(x.a.browser_download_url)+'">ダウンロード</a></article>'
+ }).join('')+'</div>';
 }
-(async()=>{
-  const el=document.querySelector('#list');
-  try{
-    const res=await fetch('/api/releases',{cache:'no-store'});
-    const data=await res.json();
-    if(!res.ok)throw new Error(data.message||('HTTP '+res.status));
-    if(!Array.isArray(data))throw new Error('Release API response is invalid');
-    const items=data.flatMap(r=>(r.assets||[])
-      .filter(a=>a.name.toLowerCase().endsWith('.zim'))
-      .map(a=>({a,r,title:(a.label&&a.label.trim())||(r.name&&r.name!==r.tag_name?r.name:null)||titleFromName(a.name),category:a.category||null})));
-    if(!items.length){el.innerHTML='<p class="empty">公開済みReleaseにZIM assetはありません。</p>';return}
-    const groups=new Map();
-    for(const item of items){const c=categoryFor(item);if(!groups.has(c))groups.set(c,[]);groups.get(c).push(item)}
-    const preferred=['生物・自然科学','技術・IT','歴史・社会','その他'];
-    const cats=[...groups.keys()].sort((a,b)=>{
-      const ai=preferred.indexOf(a),bi=preferred.indexOf(b);
-      return (ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b,'ja');
-    });
-    el.innerHTML=cats.map(cat=>{
-      const list=groups.get(cat);
-      return '<section class="category"><div class="category-head"><h2>'+esc(cat)+'</h2><span class="count">'+list.length+'件</span></div><div class="grid">'+
-      list.map(({a,r,title})=>'<article class="item"><div class="info"><div class="title">'+esc(title)+'</div><div class="tag">'+esc(r.tag_name||'Release')+' · '+(a.size/1048576).toFixed(1)+' MB</div></div><a class="download" href="'+esc(a.browser_download_url)+'">ダウンロード</a></article>').join('')+
-      '</div></section>';
-    }).join('');
-  }catch(e){el.innerHTML='<p class="err">Release一覧の取得に失敗しました: '+esc(e.message||e)+'</p>'}
-})();
-</script>
-</body>
-</html>
+function tabs(){
+ const cats=['すべて',...new Set(all.map(x=>x.category))];
+ const pref=['すべて','生物・自然科学','技術・IT','歴史・社会','その他'];cats.sort((a,b)=>(pref.indexOf(a)<0?99:pref.indexOf(a))-(pref.indexOf(b)<0?99:pref.indexOf(b))||a.localeCompare(b,'ja'));
+ document.querySelector('#tabs').innerHTML=cats.map(c=>'<button class="tab'+(c===active?' active':'')+'" data-cat="'+esc(c)+'">'+esc(c)+'</button>').join('');
+ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{active=b.dataset.cat;tabs();render()});
+}
+document.querySelector('#search').addEventListener('input',render);document.querySelector('#sort').addEventListener('change',render);
+document.querySelector('#bulk').onclick=()=>{
+ const xs=visible(); if(!xs.length)return;
+ if(xs.length>1&&!confirm(xs.length+'件のZIMをダウンロードします。続行しますか？'))return;
+ xs.forEach((x,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=x.a.browser_download_url;a.download='';document.body.appendChild(a);a.click();a.remove()},i*350));
+};
+(async()=>{const el=document.querySelector('#list');try{
+ const res=await fetch('/api/releases',{cache:'no-store'}),data=await res.json();if(!res.ok)throw new Error(data.message||('HTTP '+res.status));if(!Array.isArray(data))throw new Error('Release API response is invalid');
+ all=data.flatMap(r=>(r.assets||[]).filter(a=>a.name.toLowerCase().endsWith('.zim')).map(a=>{const x={a,r,title:(a.label&&a.label.trim())||(r.name&&r.name!==r.tag_name?r.name:null)||titleFromName(a.name)};x.category=categoryFor(x);return x}));
+ if(!all.length){el.innerHTML='<p class="empty">公開済みReleaseにZIM assetはありません。</p>';return}tabs();render()
+}catch(e){el.innerHTML='<p class="err">Release一覧の取得に失敗しました: '+esc(e.message||e)+'</p>'}})();
+</script></body></html>
