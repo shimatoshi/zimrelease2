@@ -45,9 +45,18 @@ jobs:
           if [ "${{ github.event_name }}" = workflow_dispatch ]; then TITLE="${{ github.event.inputs.title }}"; fi
           ARGS=(--lang "${{ github.event.inputs.lang || 'ja' }}"); [ -n "$TITLE" ] && ARGS+=(--title "$TITLE")
           python3 zim_pack.py "content/$SLUG.html" "$SLUG.zim" "${ARGS[@]}"
+          ZIM_TITLE=$(python3 - "$SLUG.zim" <<'PY'
+import sys
+from libzim.reader import Archive
+z=Archive(sys.argv[1])
+print(z.get_metadata("Title"))
+PY
+          )
+          echo "ZIM_TITLE=$ZIM_TITLE" >> "$GITHUB_ENV"
       - name: release
         env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
         run: |
           SLUG="${{ matrix.slug }}"
           gh release delete "$SLUG" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "$SLUG" "$SLUG.zim" --title "$SLUG" --notes "auto-packed by zimrelease2 CI"
+          gh release create "$SLUG" --title "$ZIM_TITLE" --notes "auto-packed by zimrelease2 CI"
+          gh release upload "$SLUG" "$SLUG.zim#${ZIM_TITLE}#application/x-openzim"
