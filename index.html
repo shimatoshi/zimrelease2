@@ -46,7 +46,7 @@ function categoryFor(item){
     if(!Array.isArray(data))throw new Error('Release API response is invalid');
     const items=data.flatMap(r=>(r.assets||[])
       .filter(a=>a.name.toLowerCase().endsWith('.zim'))
-      .map(a=>({a,r,title:a.label||titleFromName(a.name),category:a.category||null})));
+      .map(a=>({a,r,title:(a.label&&a.label.trim())||(r.name&&r.name!==r.tag_name?r.name:null)||titleFromName(a.name),category:a.category||null})));
     if(!items.length){el.innerHTML='<p class="empty">公開済みReleaseにZIM assetはありません。</p>';return}
     const groups=new Map();
     for(const item of items){const c=categoryFor(item);if(!groups.has(c))groups.set(c,[]);groups.get(c).push(item)}
