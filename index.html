@@ -16,15 +16,35 @@ button,select,input{font:inherit}.tab,.bulk{border:1px solid var(--line);backgro
 .info{min-width:0}.title{font-weight:700;overflow-wrap:anywhere}.meta{font-size:.84rem;margin-top:6px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 .version{font-size:.72rem;font-weight:800;border:1px solid #4b5563;border-radius:5px;padding:2px 6px;color:#d5d9df}.version.v2{border-color:#7ab7e8;color:#9fd2ff}
 .download{flex:none;background:#eee;color:#111;text-decoration:none;border-radius:8px;padding:9px 13px;font-weight:700;font-size:.9rem}.empty,.err{color:var(--muted)}.err{color:#ffb4b4}
+.submit-row{display:flex;gap:10px;margin:0 0 8px}.submit-row input{flex:1;min-width:0}
+#submit-msg{font-size:.84rem;color:var(--accent);margin:0 0 20px;min-height:1.2em}
 @media(max-width:650px){body{padding-top:26px}.toolbar{grid-template-columns:1fr 1fr}.search{grid-column:1/-1}.item{align-items:flex-start;flex-direction:column}.download{width:100%;text-align:center}}
 </style></head><body>
 <header><h1>ZIM Library</h1><p class="lead">オフラインで閲覧できるZIMアーカイブ</p></header>
+<div class="submit-row"><input id="topic-input" class="search" type="text" placeholder="調査してほしいテーマを入力…" maxlength="500">
+<button id="submit-btn" class="bulk" onclick="submitTopic()">送信</button></div>
+<div id="submit-msg"></div>
 <nav id="tabs" class="tabs"></nav>
 <div class="toolbar"><input id="search" class="search" type="search" placeholder="ZIMを検索…" autocomplete="off">
 <select id="sort"><option value="date-desc">日付：新しい順</option><option value="date-asc">日付：古い順</option><option value="title-asc">タイトル：あいうえお順</option><option value="title-desc">タイトル：逆順</option></select>
 <button id="bulk" class="bulk">カテゴリを一括DL</button></div>
 <main id="list">読み込み中…</main>
 <script>
+async function submitTopic(){
+ const input=document.querySelector('#topic-input'),btn=document.querySelector('#submit-btn'),msg=document.querySelector('#submit-msg');
+ const topic=input.value.trim(); if(!topic)return;
+ btn.disabled=true; msg.textContent='送信中…';
+ try{
+  const r=await fetch('https://url-board.vercel.app/api/resolve/research-zim-gpt');
+  if(!r.ok)throw new Error('backend resolve failed');
+  const {url}=await r.json();
+  await fetch(url+'/api/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
+  msg.textContent='送信しました。GPTがZIMを作成し、完成後にこの一覧に表示されます。';
+  input.value='';
+ }catch(e){ msg.textContent='送信に失敗しました: '+e.message; }
+ finally{ btn.disabled=false; }
+}
+document.querySelector('#topic-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitTopic()});
 const CATEGORY_RULES=[
  ['生物・自然科学',/(biology|bio|fish|goby|rhinogobius|yoshinobori|kurodai|nature|ecology|science|ヨシノボリ|クロダハゼ|生物|自然|魚|微生物|深海|南極)/i],
  ['技術・IT',/(tech|software|program|code|computer|android|linux|\bai\b|llm|web|技術|it)/i],
