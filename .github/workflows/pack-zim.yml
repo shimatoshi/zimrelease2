@@ -46,11 +46,11 @@ jobs:
           ARGS=(--lang "${{ github.event.inputs.lang || 'ja' }}"); [ -n "$TITLE" ] && ARGS+=(--title "$TITLE")
           python3 zim_pack.py "content/$SLUG.html" "$SLUG.zim" "${ARGS[@]}"
           ZIM_TITLE=$(python3 - "$SLUG.zim" <<'PY'
-import sys
-from libzim.reader import Archive
-z=Archive(sys.argv[1])
-print(z.get_metadata("Title"))
-PY
+          import sys
+          from libzim.reader import Archive
+          z=Archive(sys.argv[1])
+          print(z.get_metadata("Title"))
+          PY
           )
           echo "ZIM_TITLE=$ZIM_TITLE" >> "$GITHUB_ENV"
       - name: release
