@@ -18,31 +18,42 @@ button,select,input{font:inherit}.tab,.bulk{border:1px solid var(--line);backgro
 .download{flex:none;background:#eee;color:#111;text-decoration:none;border-radius:8px;padding:9px 13px;font-weight:700;font-size:.9rem}.empty,.err{color:var(--muted)}.err{color:#ffb4b4}
 .submit-row{display:flex;gap:10px;margin:0 0 8px}.submit-row input{flex:1;min-width:0}
 #submit-msg{font-size:.84rem;color:var(--accent);margin:0 0 20px;min-height:1.2em}
+button,.download{min-height:44px}button:disabled{opacity:.55;cursor:wait}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#submit-msg.error{color:#ffb4b4}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:650px){body{padding-top:26px}.toolbar{grid-template-columns:1fr 1fr}.search{grid-column:1/-1}.item{align-items:flex-start;flex-direction:column}.download{width:100%;text-align:center}}
 </style></head><body>
 <header><h1>ZIM Library</h1><p class="lead">オフラインで閲覧できるZIMアーカイブ</p></header>
-<div class="submit-row"><input id="topic-input" class="search" type="text" placeholder="調査してほしいテーマを入力…" maxlength="500">
+<label class="sr-only" for="topic-input">調査テーマ</label><div class="submit-row"><input id="topic-input" class="search" type="text" placeholder="調査してほしいテーマを入力…" maxlength="500" aria-describedby="submit-msg">
 <button id="submit-btn" class="bulk" onclick="submitTopic()">送信</button></div>
-<div id="submit-msg"></div>
-<nav id="tabs" class="tabs"></nav>
-<div class="toolbar"><input id="search" class="search" type="search" placeholder="ZIMを検索…" autocomplete="off">
-<select id="sort"><option value="date-desc">日付：新しい順</option><option value="date-asc">日付：古い順</option><option value="title-asc">タイトル：あいうえお順</option><option value="title-desc">タイトル：逆順</option></select>
+<div id="submit-msg" role="status" aria-live="polite"></div>
+<nav id="tabs" class="tabs" aria-label="カテゴリ"></nav>
+<div class="toolbar"><input id="search" class="search" type="search" placeholder="ZIMを検索…" autocomplete="off" aria-label="ZIMを検索">
+<select id="sort" aria-label="並び順"><option value="date-desc">日付：新しい順</option><option value="date-asc">日付：古い順</option><option value="title-asc">タイトル：あいうえお順</option><option value="title-desc">タイトル：逆順</option></select>
 <button id="bulk" class="bulk">カテゴリを一括DL</button></div>
 <main id="list">読み込み中…</main>
 <script>
 async function submitTopic(){
  const input=document.querySelector('#topic-input'),btn=document.querySelector('#submit-btn'),msg=document.querySelector('#submit-msg');
+ if(btn.disabled)return;
  const topic=input.value.trim(); if(!topic)return;
- btn.disabled=true; msg.textContent='送信中…';
+ btn.disabled=true; input.disabled=true; msg.classList.remove('error'); msg.textContent='送信中…';
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+ let submitting=false;
  try{
-  const r=await fetch('https://url-board.vercel.app/api/resolve/research-zim-gpt');
-  if(!r.ok)throw new Error('backend resolve failed');
+  const r=await fetch('https://url-board.vercel.app/api/resolve/research-zim-gpt',{cache:'no-store',signal:controller.signal});
+  if(!r.ok)throw new Error('送信先の取得に失敗しました（HTTP '+r.status+'）');
   const {url}=await r.json();
-  await fetch(url+'/api/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
-  msg.textContent='送信しました。GPTがZIMを作成し、完成後にこの一覧に表示されます。';
+  const endpoint=new URL(url); if(endpoint.protocol!=='https:')throw new Error('送信先URLが不正です');
+  endpoint.pathname=endpoint.pathname.replace(/\/$/,'')+'/api/research'; endpoint.search=''; endpoint.hash='';
+  submitting=true;
+  const result=await fetch(endpoint.href,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic}),signal:controller.signal});
+  const data=await result.json().catch(()=>null);
+  if(!result.ok)throw new Error('送信先がエラーを返しました（HTTP '+result.status+'）');
+  if(data?.error||data?.success===false)throw new Error(typeof data.error==='string'?data.error:'テーマを受け付けられませんでした');
+  msg.textContent='テーマを受け付けました。完成したZIMは一覧に表示されます。';
   input.value='';
- }catch(e){ msg.textContent='送信に失敗しました: '+e.message; }
- finally{ btn.disabled=false; }
+ }catch(e){ msg.classList.add('error'); msg.textContent=e.name==='AbortError'?(submitting?'応答がタイムアウトしました。受付済みの可能性があります。ジョブの状況を確認してから再送してください。':'送信先の取得がタイムアウトしました。時間をおいて再度お試しください。'):(submitting&&e instanceof TypeError?'応答を確認できませんでした。受付済みの可能性があります。ジョブの状況を確認してから再送してください。':'送信に失敗しました: '+e.message); }
+ finally{ clearTimeout(timer); btn.disabled=false; input.disabled=false; }
 }
 document.querySelector('#topic-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitTopic()});
 const CATEGORY_RULES=[
